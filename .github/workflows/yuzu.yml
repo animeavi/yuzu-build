@@ -27,6 +27,7 @@ jobs:
           git config --global user.email "yuzu@yuzu-emu.org"
           git config --global user.name "yuzubot"
       - name: Merge
+        shell: bash
         run: |
           mkdir patches && pip3 install requests urllib3
           python .ci/scripts/merge/apply-patches-by-label.py "early-access-merge" "early-access-merge"
