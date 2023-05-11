@@ -32,7 +32,11 @@ jobs:
           mkdir patches && pip3 install requests urllib3
           python .ci/scripts/merge/apply-patches-by-label.py "mainline-merge" "mainline-merge"
           python .ci/scripts/merge/apply-patches-by-label.py "early-access-merge" "early-access-merge"
-          git am --3way --whitespace=fix --reject fix/*.patch || git am --skip || true
+          if [[ "$(ls -A ./fix/*.patch)" ]]; then
+            for patch in ./fix/*.patch ; do
+              git am --3way --whitespace=fix "$patch" || git am --abort
+            done
+          fi
       - name: Install dependencies
         # due to how chocolatey works, only cmd.exe is supported here
         shell: cmd
