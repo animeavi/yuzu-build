@@ -30,6 +30,7 @@ jobs:
         shell: bash
         run: |
           mkdir patches && pip3 install requests urllib3
+          python .ci/scripts/merge/apply-patches-by-label.py "mainline-merge" "mainline-merge"
           python .ci/scripts/merge/apply-patches-by-label.py "early-access-merge" "early-access-merge"
           git am --3way --whitespace=fix --reject fix/*.patch || git am --skip || true
       - name: Install dependencies
