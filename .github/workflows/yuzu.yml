@@ -15,35 +15,37 @@ jobs:
           repository: yuzu-emu/yuzu
           submodules: recursive
           fetch-depth: 0
-      - name: Checkout fix
-        uses: actions/checkout@v3
-        with:
-          path: fix
-      - uses: actions/setup-python@v4
-        with:
-          python-version: '3.9'
       - name: Configure git
         run: |
           git config --global user.email "yuzu@yuzu-emu.org"
           git config --global user.name "yuzubot"
-      - name: Merge
-        shell: bash
-        run: |
-          mkdir patches && pip3 install requests urllib3
-          python .ci/scripts/merge/apply-patches-by-label.py "mainline-merge" "mainline-merge"
-          python .ci/scripts/merge/apply-patches-by-label.py "early-access-merge" "early-access-merge"
-          if [[ "$(ls -A ./fix/*.patch)" ]]; then
-            for patch in ./fix/*.patch ; do
-              git am --3way --whitespace=fix "$patch" || git am --abort
-            done
-          fi
+          git config --global pull.rebase true
+          git config --global rebase.autoStash true
+          git config --global fetch.prune true
       - name: Install dependencies
         # due to how chocolatey works, only cmd.exe is supported here
         shell: cmd
         run: |
-          choco install vulkan-sdk
+          choco install vulkan-sdk curl
           call refreshenv
           echo %PATH% >> %GITHUB_PATH%
+      - name: Merge PR
+        uses: actions/github-script@v6
+        with: 
+          script: |
+            const myExec = async (command, args = null) => await exec.getExecOutput(`"C:\\Program Files\\Git\\bin\\bash.exe" -c "${command}"`,args,{silent: true}).then(result => result.stdout.trim()).catch(err => {console.log(err) ; return false })
+            const prs = await github.paginate(github.rest.search.issuesAndPullRequests,{
+              q: "type:pr+is:open+repo:yuzu-emu/yuzu+label:early-access-merge,mainline-merge",
+              sort: "updated",
+              order: "asc"
+            });
+            for (const pr of prs) {
+              console.log(`Merge "${pr.title}" ${pr.pull_request.html_url}`);
+              await myExec(`curl -sL ${pr.pull_request.patch_url} | (git am --3way --whitespace=fix || git am --abort) `);
+            };
+            let body = await myExec(`GIT_BRANCH=$(git name-rev --name-only HEAD) && git log origin/$GIT_BRANCH..$GIT_BRANCH --pretty=format:"%s"`)
+            core.exportVariable("body",body);
+            core.exportVariable("time",new Date().toISOString().slice(0,16))
       - name: Set up MSVC
         uses: ilammy/msvc-dev-cmd@v1
       - name: Configure
@@ -58,6 +60,7 @@ jobs:
           cmake -G "Visual Studio 17 2022" -A x64 -DCMAKE_POLICY_DEFAULT_CMP0069=NEW -DYUZU_ENABLE_LTO=ON -DYUZU_USE_BUNDLED_QT=1 -DYUZU_USE_BUNDLED_SDL2=1 -DYUZU_USE_QT_WEB_ENGINE=ON -DENABLE_COMPATIBILITY_LIST_DOWNLOAD=ON -DYUZU_ENABLE_COMPATIBILITY_REPORTING=OFF -DYUZU_TESTS=OFF -DUSE_DISCORD_PRESENCE=ON -DENABLE_QT_TRANSLATION=ON -DDISPLAY_VERSION="early-access" -DCMAKE_BUILD_TYPE=Release -DYUZU_CRASH_DUMPS=ON ..
       - name: Build
         run: msbuild "build/yuzu.sln" /m /p:Configuration=Release
+
       - name: Pack
         shell: pwsh
         run: .\.ci\scripts\windows\upload.ps1
@@ -66,12 +69,24 @@ jobs:
         with:
           name: windows
           path: artifacts/
-      - name: Rename exe
-        shell: pwsh
-        run: |
-          Rename-Item -Path ${{ env.INDIVIDUAL_EXE }} -NewName yuzu.exe
       - name: Upload EXE
         uses: actions/upload-artifact@v3
         with:
           name: windows(only exe)
-          path: yuzu.exe
+          path: artifacts/yuzu.exe
+
+      - name: Pack 7z
+        shell: cmd
+        run:
+          7z a -m0=lzma2 -mx=9 -ms=on yuzu-windows.7z artifacts/*
+      - name: Create release
+        uses: ncipollo/release-action@v1
+        with:
+          artifacts: "yuzu-windows.7z,artifacts/yuzu.exe"
+          name: "${{ env.time }}"
+          body: "${{ env.body }}"
+          tag: "release"
+          allowUpdates: true
+          artifactErrorsFailBuild: false
+          prerelease: false
+          token: ${{ secrets.GITHUB_TOKEN }}
