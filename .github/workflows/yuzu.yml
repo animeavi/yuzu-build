@@ -33,7 +33,7 @@ jobs:
         uses: actions/github-script@v6
         with: 
           script: |
-            const myExec = async (command, args = null) => await exec.getExecOutput(`"C:\\Program Files\\Git\\bin\\bash.exe" -c "${command}"`,args,{silent: true}).then(result => result.stdout.trim()).catch(err => {console.log(err) ; return false })
+            const myExec = async (command) => await exec.getExecOutput('"C:\\Program Files\\Git\\bin\\bash.exe"',["-c",command],{silent: true}).then(result => result.stdout.trim()).catch(err => {console.log(err) ; return false })
             const prs = await github.rest.search.issuesAndPullRequests({
               q: "type:pr+is:open+repo:yuzu-emu/yuzu+label:early-access-merge,mainline-merge",
               sort: "updated",
@@ -43,7 +43,9 @@ jobs:
             for (const pr of prs) {
               console.log(`Merge "${pr.title}" ${pr.pull_request.html_url}`);
               let pn = pr.number;
-              await myExec(`git fetch "https://github.com/yuzu-emu/yuzu.git" "pull/${pn}/head:pr-${pn}" -f --no-recurse-submodules && git merge --squash "pr-${pn}" && git commit -m "${pr.title}" `);
+              await myExec(`git fetch "https://github.com/yuzu-emu/yuzu.git" "pull/${pn}/head:pr-${pn}" -f --no-recurse-submodules`);
+              await myExec(`git merge --squash "pr-${pn}"`)
+              await myExec(`git commit -m "${pr.title}" `)
             };
             let body = await myExec(`GIT_BRANCH=$(git name-rev --name-only HEAD) && git log origin/$GIT_BRANCH..$GIT_BRANCH --pretty=format:"%s"`)
             core.exportVariable("body",body);
