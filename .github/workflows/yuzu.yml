@@ -26,7 +26,7 @@ jobs:
         # due to how chocolatey works, only cmd.exe is supported here
         shell: cmd
         run: |
-          choco install vulkan-sdk curl
+          choco install vulkan-sdk
           call refreshenv
           echo %PATH% >> %GITHUB_PATH%
       - name: Merge PR
@@ -42,7 +42,8 @@ jobs:
             }).then(res => res.data.items);
             for (const pr of prs) {
               console.log(`Merge "${pr.title}" ${pr.pull_request.html_url}`);
-              await myExec(`curl -sL ${pr.pull_request.patch_url} | (git am --3way --whitespace=fix || git am --abort) `);
+              let pn = pr.number;
+              await myExec(`git fetch "https://github.com/yuzu-emu/yuzu.git" "pull/${pn}/head:pr-${pn}" -f --no-recurse-submodules && git merge --squash "pr-${pn}" && git commit -m "${pr.title}" `);
             };
             let body = await myExec(`GIT_BRANCH=$(git name-rev --name-only HEAD) && git log origin/$GIT_BRANCH..$GIT_BRANCH --pretty=format:"%s"`)
             core.exportVariable("body",body);
