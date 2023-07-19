@@ -30,8 +30,8 @@ jobs:
         # due to how chocolatey works, only cmd.exe is supported here
         shell: cmd
         run: |
-          choco install wget
-          wget "%TEMP%\vulkansdk.exe" "https://sdk.lunarg.com/sdk/download/1.3.250.1/windows/VulkanSDK-1.3.250.1-Installer.exe"
+          choco install wget --no-progress
+          wget -O "%TEMP%\vulkansdk.exe" "https://sdk.lunarg.com/sdk/download/1.3.250.1/windows/VulkanSDK-1.3.250.1-Installer.exe"
           "%TEMP%\vulkansdk.exe" --accept-licenses --default-answer --confirm-command install
           call refreshenv
           echo %PATH% >> %GITHUB_PATH%
