@@ -19,7 +19,7 @@ jobs:
           repository: yuzu-emu/yuzu
           submodules: recursive
           fetch-depth: 0
-      - name: set env
+      - name: Set env variable
         shell: bash
         run: echo "NOW=$(date +'%Y-%m-%d')" >> $GITHUB_ENV
       - name: Configure git
@@ -98,7 +98,7 @@ jobs:
           artifacts: "yuzu-windows-${{ env.NOW }}.7z"
           title: "${{ env.NOW }}"
           body: "${{ env.body }}"
-          automatic_release_tag: "${{ env.NOW }}"
+          tag: "${{ env.NOW }}"
           allowUpdates: true
           artifactErrorsFailBuild: false
           prerelease: false
