@@ -19,6 +19,9 @@ jobs:
           repository: yuzu-emu/yuzu
           submodules: recursive
           fetch-depth: 0
+      - name: set env
+        shell: bash
+        run: echo "NOW=$(date +'%Y-%m-%d')" >> $GITHUB_ENV
       - name: Configure git
         run: |
           git config --global user.email "yuzu@yuzu-emu.org"
@@ -88,14 +91,14 @@ jobs:
       - name: Pack 7z
         shell: cmd
         run:
-          7z a -m0=lzma2 -mx=9 -ms=on yuzu-windows.7z artifacts/*
+          7z a -m0=lzma2 -mx=9 -ms=on "yuzu-windows-${{ env.NOW }}.7z" artifacts/*
       - name: Create release
         uses: ncipollo/release-action@v1
         with:
-          artifacts: "yuzu-windows.7z,artifacts/yuzu.exe"
-          name: "${{ env.time }}"
+          artifacts: "yuzu-windows-${{ env.NOW }}.7z"
+          title: "${{ env.NOW }}"
           body: "${{ env.body }}"
-          tag: "release"
+          automatic_release_tag: "${{ env.NOW }}"
           allowUpdates: true
           artifactErrorsFailBuild: false
           prerelease: false
