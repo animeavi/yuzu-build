@@ -96,7 +96,7 @@ jobs:
         uses: ncipollo/release-action@v1
         with:
           artifacts: "yuzu-windows-${{ env.NOW }}.7z"
-          title: "${{ env.NOW }}"
+          name: "${{ env.NOW }}"
           body: "${{ env.body }}"
           tag: "${{ env.NOW }}"
           allowUpdates: true
